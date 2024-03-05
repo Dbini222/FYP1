@@ -1,4 +1,4 @@
-#!/Users/danib/FYP/finalyearprojectenv/bin/python3
+#!/Users/danib/FYP/env/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
