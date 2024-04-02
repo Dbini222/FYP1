@@ -1,0 +1,43 @@
+# Compiled code and build artifacts
+*.o
+*.pyc
+__pycache__/
+build/
+dist/
+
+# IDE and editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Dependencies and virtual environments
+venv/
+node_modules/
+
+# Sensitive information
+.env
+secrets.json
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Data files (raw and processed)
+data/
+*.csv
+*.h5
+*.pkl
+
+# Model checkpoints and artifacts
+models/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore compiled Python extensions
+*.so
+
+# Ignore any custom directories or files
+custom_dir/
+custom_file.txt
