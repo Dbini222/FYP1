@@ -8,7 +8,7 @@ AIM:
 The websites which I am going to use for webscraping are:
 - Tee Fury: doesn't give any rating or anything, just the popularity order
 - Redbubble : https://www.redbubble.com/shop/?iaCode=u-tees&sortOrder=top%20selling
-- Spreadshirt
+- Spreadshirt : it's illegal
 - Aasaan App
 - Shopify
 - Aliexpress: https://www.aliexpress.com/w/wholesale-men-t-shirts.html?g=y&SearchText=men+t+shirts&sortType=total_tranpro_desc

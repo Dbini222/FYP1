@@ -11,7 +11,7 @@ dist/
 .DS_Store
 
 # Dependencies and virtual environments
-venv/
+env/
 node_modules/
 
 # Sensitive information
