@@ -1,4 +1,6 @@
 This directory is to store all the scripts that I will be using in this project. This is limited to MEN'S T-SHIRTS
+TODO:
+- write tests for what to do if the website is returning none (i.e.e because the website has changed the way it does the tags for example)
 
 AIM:
 - go through the several e-commerce website pages get images from their best selling t-shirts

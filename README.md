@@ -1,5 +1,16 @@
 # FYP
+TODO:
+- at the end of all the data process, delete all the generated csv file so that you are always keeping the latest one in raw? or do you want to start removing duplicates and changing the order now? or do it all in scrapy etc.
+## Airflow monitoring
 
+To access the Airflow web ui, just run the following commands in terminal:
+```airflow webserver -p 8080```
+
+To test specific task using Airflow CLI run the following:
+```airflow tasks test <dag_id> <task_id> <execution_date>```
+
+i.e.to test threadheads in the data_collection_dag run the following:
+```airflow tasks test data_collection_dag run_threadheads_spider '2023-01-01```
 
 
 ## Getting started
