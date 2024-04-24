@@ -11,16 +11,21 @@ class AmazonSpider(scrapy.Spider):
 
     def parse(self, response):
         for product in response.css('div.a-cardui._cDEzb_grid-cell_1uMOS.expandableGrid.p13n-grid-content'):
+            product_id = product.css('div.p13n-sc-uncoverable-faceout').attrib['id'],
+            images =  product.css('img.a-dynamic-image.p13n-sc-dynamic-image.p13n-product-image::attr(src)').get(),
+            description = product.css('div._cDEzb_p13n-sc-css-line-clamp-3_g3dy1::text').get()
+            popularity = int(product.css('span.zg-bdg-text::text').get().replace("#",""))
             try:
-                yield {
-                    'product_id':  product.css('div.p13n-sc-uncoverable-faceout').attrib['id'],
-                    'images': product.css('img.a-dynamic-image.p13n-sc-dynamic-image.p13n-product-image::attr(src)').get(),
-                    'description': product.css('div._cDEzb_p13n-sc-css-line-clamp-3_g3dy1::text').get(),
-                    'shop': None,
-                    'website': 'amazon',
-                    'popularity': int(product.css('span.zg-bdg-text::text').get().replace("#","")),
-                    'age': self.age,
-                    }
+                if product_id and images and description and popularity is not None:
+                    yield {
+                        'product_id':  product_id,
+                        'images': images,
+                        'description': description,
+                        'shop': None,
+                        'website': 'amazon',
+                        'popularity': popularity,
+                        'age': self.age,
+                        }
         
             except Exception as e:
                     print('Error: ', e)
