@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageOps
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
+#filter out plain t-shirts
 
 def get_list_of_image(directory_path):
     # for each csv, get the first 10 images and add to a list
