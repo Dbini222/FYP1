@@ -30,15 +30,16 @@ class ThreadheadsSpider(scrapy.Spider):
             # product_shop = product.css('a.product-category-link::text').extract_first()
         
             try:
-                yield {
-                    'product_id': product_id,
-                    'images': product_image,
-                    'description':  product_description,
-                    'shop': None,
-                    'website': self.name,
-                    'popularity': self.overall_position,
-                    'age': self.age,
-                    }
+                if product_id and product_image and product_description is not None:
+                    yield {
+                        'product_id': product_id,
+                        'images': product_image,
+                        'description':  product_description,
+                        'shop': None,
+                        'website': self.name,
+                        'popularity': self.overall_position,
+                        'age': self.age,
+                        }
         
             except Exception as e:
                 print('Error: ', e)

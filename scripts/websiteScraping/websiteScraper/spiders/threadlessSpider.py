@@ -1,6 +1,6 @@
 import scrapy 
 import json
-
+#Fix this so that it doesn't have to do popularity like that, instead make it a counter which is more reliable like the other code
 class ThreadlessSpider(scrapy.Spider):
     name = "threadless"
     start_urls = [
@@ -20,17 +20,23 @@ class ThreadlessSpider(scrapy.Spider):
             if self.overall_position + int(data["position"]) >= self.custom_settings['CLOSESPIDER_ITEMCOUNT']:
                     raise scrapy.exceptions.CloseSpider('reached maximum item count')
             else:
+                product_id = data["id"]
+                image = product.css('img.img-responsive::attr(data-src)').extract_first()
+                description = data["name"]
+                shop = product.css('a.sf-by-line.pjax-link::text').get()
+                popularity = self.overall_position + int(data["position"])
                 try:
-                    yield {
-                        'product_id': data["id"],
-                        'images': product.css('img.img-responsive::attr(data-src)').extract_first(),
-                        'description': data["name"],
-                        'shop': product.css('a.sf-by-line.pjax-link::text').get(),
-                        'website': self.name,
-                        'popularity': self.overall_position + int(data["position"]),
-                        'age': self.age,
-                        }
-        
+                    if product_id and image and description is not None:
+                        yield {
+                            'product_id': product_id,
+                            'images': image,
+                            'description': description,
+                            'shop': shop,
+                            'website': self.name,
+                            'popularity': popularity,
+                            'age': self.age,
+                            }
+            
                 except Exception as e:
                     print('Error: ', e)
                     # yield {

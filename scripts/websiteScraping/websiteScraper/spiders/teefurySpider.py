@@ -31,18 +31,20 @@ class TeefurySpider(scrapy.Spider):
                 product_id = id_attr.split('-')[-1]
                 product_image = product.css('img.collect-prod__img::attr(src)').get()
                 product_description = product.css('div.product-grid-item__meta a::text').get()
-                product_url_suffix = product.css('a::attr(href)').get()
-                product_url = response.urljoin(product_url_suffix)
-
-                yield {
-                    'product_id': product_id,
-                    'images': 'https:' + product_image if product_image else None,
-                    'description': product_description,
-                    'shop': None,
-                    'website': self.website,
-                    'popularity': self.item_count,
-                    'age': self.age,
-                }
+                
+                try:
+                    if product_id and product_image and product_description is not None:
+                        yield {
+                            'product_id': product_id,
+                            'images': 'https:' + product_image,
+                            'description': product_description,
+                            'shop': None,
+                            'website': self.website,
+                            'popularity': self.item_count,
+                            'age': self.age,
+                        }
+                except Exception as e:
+                    print('Error: ', e)
 
         # Handle pagination only if not stopped
         if not self.stop_new_requests:
