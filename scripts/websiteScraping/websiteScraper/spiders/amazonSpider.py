@@ -7,7 +7,6 @@ class AmazonSpider(scrapy.Spider):
         "https://www.amazon.co.uk/Best-Sellers-Fashion-Mens-T-Shirts/zgbs/fashion/1731028031/ref=zg_bs_pg_1_fashion?_encoding=UTF8&pg=1" 
         ]
     baseURL = 'https://www.amazon.co.uk'
-    age = 0
 
     def parse(self, response):
         for product in response.css('div.a-cardui._cDEzb_grid-cell_1uMOS.expandableGrid.p13n-grid-content'):
@@ -19,7 +18,6 @@ class AmazonSpider(scrapy.Spider):
                     'shop': None,
                     'website': 'amazon',
                     'popularity': int(product.css('span.zg-bdg-text::text').get().replace("#","")),
-                    'age': self.age,
                     }
         
             except Exception as e:

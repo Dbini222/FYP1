@@ -8,7 +8,6 @@ class TeepublicSpider(scrapy.Spider):
         'https://www.teepublic.com/t-shirts?safe_search=false',
     ]
     baseURL = 'https://www.teepublic.com'
-    age = 0
     overall_position = 0
     
     custom_settings = {
@@ -33,7 +32,6 @@ class TeepublicSpider(scrapy.Spider):
                     'shop': product_shop,
                     'website': self.name,
                     'popularity': self.overall_position,
-                    'age': self.age,
                     }
         
             except Exception as e:
@@ -45,7 +43,6 @@ class TeepublicSpider(scrapy.Spider):
                     #     'shop': None,
                     #     'website': None,
                     #     'popularity':None,
-                    #     'age': None,
                     #     }
         try:
             next_page = response.css('a[rel="next"]::attr(href)').get()

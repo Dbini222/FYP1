@@ -7,7 +7,6 @@ class ThreadlessSpider(scrapy.Spider):
         'https://www.threadless.com/search?shop=threadless&sort=popular&departments=mens&style=t-shirt',
     ]
     baseURL = 'https://www.threadless.com'
-    age = 0
     overall_position = 0
     
     custom_settings = {
@@ -28,7 +27,6 @@ class ThreadlessSpider(scrapy.Spider):
                         'shop': product.css('a.sf-by-line.pjax-link::text').get(),
                         'website': self.name,
                         'popularity': self.overall_position + int(data["position"]),
-                        'age': self.age,
                         }
         
                 except Exception as e:

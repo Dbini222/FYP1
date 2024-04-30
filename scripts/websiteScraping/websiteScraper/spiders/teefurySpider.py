@@ -5,7 +5,6 @@ class TeefurySpider(scrapy.Spider):
     start_urls = [
         'https://teefury.com/collections/tees',
     ]
-    age = 0
     item_count = 0
     stop_new_requests = False  # Flag to stop new product processing
     website = 'teefury'
@@ -41,7 +40,6 @@ class TeefurySpider(scrapy.Spider):
                     'shop': None,
                     'website': self.website,
                     'popularity': self.item_count,
-                    'age': self.age,
                 }
 
         # Handle pagination only if not stopped

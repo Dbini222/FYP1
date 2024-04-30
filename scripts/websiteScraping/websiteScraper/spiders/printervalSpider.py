@@ -7,7 +7,6 @@ class PrintervalSpider(scrapy.Spider):
     start_urls = [
         'https://printerval.com/uk/c/clothing/shirts-tops/t-shirts?order=sold',
     ]
-    age = 0
     overall_position = 0
     
     custom_settings = {
@@ -37,7 +36,6 @@ class PrintervalSpider(scrapy.Spider):
                     'shop': product_shop,
                     'website': self.name,
                     'popularity': self.overall_position,
-                    'age': self.age,
                     }
         
             except Exception as e:

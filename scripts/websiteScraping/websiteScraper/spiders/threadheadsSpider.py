@@ -10,7 +10,6 @@ class ThreadheadsSpider(scrapy.Spider):
         'https://threadheads.co.uk/collections/shirts?filter.p.product_type=T-Shirt',
     ]
     baseURL = 'https://threadheads.co.uk'
-    age = 0
     overall_position = 0
     
     custom_settings = {
@@ -37,7 +36,6 @@ class ThreadheadsSpider(scrapy.Spider):
                     'shop': None,
                     'website': self.name,
                     'popularity': self.overall_position,
-                    'age': self.age,
                     }
         
             except Exception as e:
