@@ -4,17 +4,15 @@ from firebase_admin import credentials, firestore
 from pathlib import Path
 import os
 from glob import glob
-''' Because the presence of a shop name is not guaranteed, 
-could prioritize core product characteristics that are always present, 
-such as the product description, and use the shop name as a secondary
- attribute in your duplicate detection logic. Keep in mind that if two items are the 
- same and have the same name, but not the same shop, they aren't duplicates
 
- also, when items are found as duplicates, then we give it popularity of their average due to not knowing how many people were on different sites.
+'''
+Because shop name isn't always available, we will mainly rely on product description to find duplicated, and only remove those with the same shop name
+and description
+When items are found as duplicates, then we give it popularity of their average due to not knowing how many people were on different sites.
 
- Workflow:
+Workflow to follow:
 Initialize Firebase: Set up Firebase connection.
-Fetch Data: Retrieve existing data from Firestore.
+Fetch Data: Retrieve already existing data from previous versions from Firestore.
 Read and Combine New Data: Load new data from CSV files and combine it.
 Process Data: Deduplicate and aggregate combined data.
 Update Firestore: Upload the processed data back to Firestore.
