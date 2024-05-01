@@ -17,8 +17,11 @@ class PrintervalSpider(scrapy.Spider):
             yield scrapy.Request(url, self.parse, headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'})
 
-    def parse(self, response):
-        for product in response.css('div.product-item-box.price-highlight.old-price-highlight'):
+    def parse(self, response): 
+        for product in response.css('div.product-item-box.test'):
+            if product is None or product == []:
+                print('No products found, refer back to website incase they have changed their structure')
+                break
             self.overall_position += 1
             if self.overall_position > self.custom_settings['CLOSESPIDER_ITEMCOUNT']:
                 raise scrapy.exceptions.CloseSpider('reached maximum item count')

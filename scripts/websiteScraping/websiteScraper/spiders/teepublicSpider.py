@@ -16,6 +16,9 @@ class TeepublicSpider(scrapy.Spider):
 
     def parse(self, response):
         for product in response.css('div.m-tiles__tile.jsDesignContainer'):
+            if product is None or product == []:
+                print('No products found, refer back to website incase they have changed their structure')
+                break
             self.overall_position += 1
             if self.overall_position > self.custom_settings['CLOSESPIDER_ITEMCOUNT']:
                     raise scrapy.exceptions.CloseSpider('reached maximum item count')

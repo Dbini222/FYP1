@@ -15,6 +15,9 @@ class ThreadlessSpider(scrapy.Spider):
 
     def parse(self, response):
         for product in response.css('div.media-card'):
+            if product is None or product == []:
+                print('No products found, refer back to website incase they have changed their structure')
+                break
             data = json.loads(product.css('a.pjax-link.media-image.discover-as-product-linkback-mc').attrib['data-ec-trigger'])
             if self.overall_position + int(data["position"]) >= self.custom_settings['CLOSESPIDER_ITEMCOUNT']:
                     raise scrapy.exceptions.CloseSpider('reached maximum item count')

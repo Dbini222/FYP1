@@ -18,6 +18,9 @@ class ThreadheadsSpider(scrapy.Spider):
 
     def parse(self, response):
         for product in response.css('product-card.product-card.product-card--blends.bg-custom.text-custom'):
+            if product is None or product == []:
+                print('No products found, refer back to website incase they have changed their structure')
+                break
             self.overall_position += 1
             if self.overall_position > self.custom_settings['CLOSESPIDER_ITEMCOUNT']:
                 print("here")
