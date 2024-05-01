@@ -40,29 +40,29 @@ db = firestore.client()
 def fetch_data_from_firestore():
     try:
         collections = db.collection('products').stream()
-        data = [{'product_id': doc.id, **doc.to_dict()} for doc in collections]
+        data = [{'product_id': doc.id, **doc.to_dict(), 'is_new': False} for doc in collections]  # Mark existing data as not new
         if not data:
-            # Return an empty DataFrame with expected columns if no documents are found
-            return pd.DataFrame(columns=['product_id', 'description', 'shop', 'popularity', 'images', 'age'])
+            return pd.DataFrame(columns=['product_id', 'description', 'shop', 'popularity', 'images', 'age', 'is_new'])
         return pd.DataFrame(data)
     except Exception as e:
         print(f"Failed to fetch data from Firestore: {e}")
-        return pd.DataFrame(columns=['product_id', 'description', 'shop', 'popularity', 'images', 'age'])
+        return pd.DataFrame(columns=['product_id', 'description', 'shop', 'popularity', 'images', 'age', 'is_new'])
 
 
-# function to fetch data from csv files and return a dataframe
+
+# function to fetch data from csv files and return a dataframe with is_new = true
 def combine_and_process_csv_files(directory_path):
     csv_files = glob(os.path.join(directory_path, '*.csv'))
     all_data = pd.DataFrame()
 
     for file in csv_files:
-        print(f"Processing file: {os.path.basename(file)}")  # Print the name of the current file
-
+        print(f"Processing file: {os.path.basename(file)}")
         df = pd.read_csv(file)
+        df['is_new'] = True  # Only new CSV data should be marked as new
         all_data = pd.concat([all_data, df], ignore_index=True)
 
-    # processed_products = process_products(all_data)
     return all_data
+
 
 #Merge old and new product data, then deduplicate and process.
 def process_products(old_data, new_data):
@@ -76,9 +76,11 @@ def process_products(old_data, new_data):
         'product_id': 'first',  # Keep the first product_id encountered
         'images': 'first',  # Keep the first image URL encountered
         'popularity': 'mean',  # Average popularity
-        'age': 'max'  # Use the highest age to signify that it is the most recent
+        'age': 'max',  # Use the highest age to signify that it is the most recent
+        'is_new': 'first'  # Preserve the is_new status
     }).reset_index()
     return processed_data
+
 
 def update_firebase(data):
     """Update Firestore with processed product data."""
@@ -97,15 +99,11 @@ def create_composite_id(product_id, website):
     return f"{product_id}_{website}"
 
 if __name__ == "__main__":
-    # Fetch existing data from Firestore
     existing_data = fetch_data_from_firestore()
-
-    # Path to the directory containing new data CSVs
-    directory_path = 'path_to_your_directory'
+    directory_path = '../../data/raw'
     new_data = combine_and_process_csv_files(directory_path)
-
-    # Process and merge the existing and new data
     processed_data = process_products(existing_data, new_data)
-
-    # Update Firestore with the processed data
+    # you only want to process the images of new data
+    new_products_data = processed_data[processed_data['is_new'] == True]
     update_firebase(processed_data)
+
