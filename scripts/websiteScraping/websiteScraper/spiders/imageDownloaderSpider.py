@@ -36,7 +36,7 @@ class ImageDownloaderSpider(scrapy.Spider):
             yield Request(data['url'], self.parse_img, meta={'doc_id': data['doc_id']})
 
     def parse_img(self, response):
-        directory = "../../data/raw/preprocess_images"  # Define the directory for saved images
+        directory = "../../data/raw/preprocessed_images"  # Define the directory for saved images
         if not os.path.exists(directory):
             os.makedirs(directory)
 
