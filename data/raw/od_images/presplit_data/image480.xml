@@ -1,0 +1,26 @@
+<annotation verified="yes">
+	<folder>od_images</folder>
+	<filename>image480.jpg</filename>
+	<path>/Users/danib/FYP/data/raw/od_images/image480.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>540</width>
+		<height>539</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>design</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>175</xmin>
+			<ymin>135</ymin>
+			<xmax>361</xmax>
+			<ymax>395</ymax>
+		</bndbox>
+	</object>
+</annotation>

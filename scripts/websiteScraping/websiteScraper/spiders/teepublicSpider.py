@@ -8,7 +8,6 @@ class TeepublicSpider(scrapy.Spider):
         'https://www.teepublic.com/t-shirts?safe_search=false',
     ]
     baseURL = 'https://www.teepublic.com'
-    age = 0
     overall_position = 0
     
     custom_settings = {
@@ -17,6 +16,9 @@ class TeepublicSpider(scrapy.Spider):
 
     def parse(self, response):
         for product in response.css('div.m-tiles__tile.jsDesignContainer'):
+            if product is None or product == []:
+                print('No products found, refer back to website incase they have changed their structure')
+                break
             self.overall_position += 1
             if self.overall_position > self.custom_settings['CLOSESPIDER_ITEMCOUNT']:
                     raise scrapy.exceptions.CloseSpider('reached maximum item count')
@@ -46,7 +48,6 @@ class TeepublicSpider(scrapy.Spider):
                     #     'shop': None,
                     #     'website': None,
                     #     'popularity':None,
-                    #     'age': None,
                     #     }
         try:
             next_page = response.css('a[rel="next"]::attr(href)').get()

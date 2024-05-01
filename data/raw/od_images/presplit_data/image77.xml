@@ -1,0 +1,26 @@
+<annotation verified="yes">
+	<folder>od_images</folder>
+	<filename>image77.jpg</filename>
+	<path>/Users/danib/FYP/data/raw/od_images/image77.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>350</width>
+		<height>420</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>design</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>1</difficult>
+		<bndbox>
+			<xmin>119</xmin>
+			<ymin>69</ymin>
+			<xmax>231</xmax>
+			<ymax>212</ymax>
+		</bndbox>
+	</object>
+</annotation>
