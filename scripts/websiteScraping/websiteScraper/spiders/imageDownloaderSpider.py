@@ -1,43 +1,48 @@
 import scrapy
-import glob
-import os
-import pandas as pd
-import numpy as np
+import firebase_admin
+from firebase_admin import credentials, firestore
 from scrapy.http import Request
+import os
 
-#Script for image downloading, can be used to download a certain amount or all. Created to download images for object detection training
 class ImageDownloaderSpider(scrapy.Spider):
     name = 'image_downloader'
 
     def __init__(self, *args, **kwargs):
         super(ImageDownloaderSpider, self).__init__(*args, **kwargs)
-        self.image_counter = 1  # Initialize the image counter at 1
+        self.init_firebase()
+        self.image_data = self.fetch_image_data()
+
+    def init_firebase(self):
+        cred_path = '../../fyp-project-83298-firebase-adminsdk-omga1-3c741ce672.json'
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        self.db = firestore.client()
+
+    def fetch_image_data(self):
+        """Fetching image URLs and document IDs from Firestore where 'is_new' is true."""
+        image_data = []
+        try:
+            docs = self.db.collection('products').where('is_new', '==', True).stream()
+            for doc in docs:
+                data = doc.to_dict()
+                if 'images' in data:
+                    image_data.append({'url': data['images'], 'doc_id': doc.id})
+        except Exception as e:
+            self.logger.error(f"Failed to fetch image data: {e}")
+        return image_data
 
     def start_requests(self):
-        directory_path = "../../data/raw"  # Changed to relative path from project root
-        csv_files = glob.glob(os.path.join(directory_path, '*.csv'))
-        self.logger.info("CSV files found: " + str(csv_files))
-        
-        for file in csv_files:
-            if 'teefury' in file:
-                continue
-            df = pd.read_csv(file)
-            images = df['images'].tolist()
-            np.random.shuffle(images)  # Shuffle to randomize selection
-            selected_images = images[:100]  # Select the first 100 random images
-            for url in selected_images:
-                yield Request(url, self.parse_img)
+        for data in self.image_data:
+            yield Request(data['url'], self.parse_img, meta={'doc_id': data['doc_id']})
 
     def parse_img(self, response):
-        directory = "../../data/raw/od_images"  # Define the directory for saved images
+        directory = "../../data/raw/preprocess_images"  # Define the directory for saved images
         if not os.path.exists(directory):
-            os.makedirs(directory)  # Ensure the directory exists
+            os.makedirs(directory)
 
-        # Build the file path using the image counter for naming
-        file_path = os.path.join(directory, f'image{self.image_counter}.jpg')
-        self.image_counter += 1  # Increment the counter after each image
+        doc_id = response.meta['doc_id']
+        file_path = os.path.join(directory, f"{doc_id}.png")
 
-        # Save the image to the defined file path
         with open(file_path, 'wb') as f:
             f.write(response.body)
         self.log(f'Saved file {file_path}')
