@@ -10,6 +10,9 @@ class AmazonSpider(scrapy.Spider):
 
     def parse(self, response):
         for product in response.css('div.a-cardui._cDEzb_grid-cell_1uMOS.expandableGrid.p13n-grid-content'):
+            if product is None or product == []:
+                print('No products found, refer back to website incase they have changed their structure')
+                break
             try:
                 yield {
                     'product_id':  product.css('div.p13n-sc-uncoverable-faceout').attrib['id'],

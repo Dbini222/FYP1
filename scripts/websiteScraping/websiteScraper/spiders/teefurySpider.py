@@ -21,6 +21,9 @@ class TeefurySpider(scrapy.Spider):
     def parse(self, response):
         if not self.stop_new_requests:
             for product in response.css('div.collection-product.medium-up--one-third.small-down--one-half'):
+                if product is None or product == []:
+                    print('No products found, refer back to website incase they have changed their structure')
+                    break
                 if self.item_count >= 2500:
                     self.stop_new_requests = True  # Set the flag to stop processing new items
                     break  # Stop the loop

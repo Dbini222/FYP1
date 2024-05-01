@@ -29,6 +29,7 @@ dag = DAG(
     catchup=False
 )
 
+
 def run_scrapy(spider_name):
     """Function to run a specified scrapy spider and output results to CSV"""
     home_dir = os.path.expanduser('~')
@@ -39,16 +40,14 @@ def run_scrapy(spider_name):
     os.chdir(scrapy_dir)
     subprocess.run(['scrapy', 'crawl', spider_name, '-o', os.path.join(output_path, f'{spider_name}.csv')], check=True)
 
-def increment_age_and_update_csv(spider_name):
-    """Increment age stored in Airflow Variable and update the CSV file to include this age"""
+def include_age_and_update_csv(spider_name):
+    """Update the CSV file to include this age"""
     home_dir = os.path.expanduser('~')
     csv_file_path = os.path.join(home_dir, 'FYP', 'data', 'raw', f'{spider_name}.csv')
     temp_file_path = os.path.join(home_dir, 'FYP', 'data', 'raw', f'temp_{spider_name}.csv')
-    
-    # Increment age in Airflow Variable
-    age = int(Variable.get("age", default_var=0)) + 1
-    Variable.set("age", age)
-    
+     
+    age = int(Variable.get("age", default_var=0))
+       
     # Add age to CSV
     with open(csv_file_path, mode='r', newline='') as file:
         reader = csv.DictReader(file)
@@ -64,6 +63,10 @@ def increment_age_and_update_csv(spider_name):
     
     os.replace(temp_file_path, csv_file_path)
 
+def increment_age():
+    age = int(Variable.get("age", default_var=0)) + 1
+    Variable.set("age", age)
+
 spider_names = ['amazon', 'printerval', 'teefury', 'teepublic', 'threadheads', 'threadless']
 previous_task = None
 
@@ -75,14 +78,21 @@ for spider_name in spider_names:
         dag=dag
     )
     
-    increment_age_task = PythonOperator(
-        task_id=f'increment_age_and_update_{spider_name}_csv',
-        python_callable=increment_age_and_update_csv,
+    include_age_task = PythonOperator(
+        task_id=f'include_age_and_update_{spider_name}_csv',
+        python_callable=include_age_and_update_csv,
         op_args=[spider_name],
         dag=dag
     )
     
     if previous_task:
         previous_task >> run_task
-    run_task >> increment_age_task  # Chain to run after the spider
-    previous_task = increment_age_task
+    run_task >> include_age_task  # Chain to run after the spider
+    previous_task = include_age_task
+
+final_task = PythonOperator(
+    task_id='increment_age_final',
+    python_callable=increment_age,
+    dag=dag
+)
+previous_task >> final_task
