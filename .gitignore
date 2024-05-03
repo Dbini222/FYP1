@@ -32,6 +32,7 @@ data/
 # Model checkpoints and artifacts
 models/
 
+airflow_home/airflow.db
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
