@@ -32,7 +32,7 @@ firebase_key_path = fyp_directory / 'fyp-project-83298-firebase-adminsdk-omga1-3
 if not firebase_key_path.exists():
     raise FileNotFoundError(f"Firebase key file not found at {firebase_key_path}")
 
-cred = credentials.Certificate(str(fyp_directory))
+cred = credentials.Certificate(str(firebase_key_path))
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -77,7 +77,7 @@ def process_products(old_data, new_data):
         'images': 'first',  # Keep the first image URL encountered
         'popularity': 'mean',  # Average popularity
         'age': 'max',  # Use the highest age to signify that it is the most recent
-        'is_new': 'first'  # Preserve the is_new status
+        'is_new': 'first'  # Preserve the is_new status, double check this
     }).reset_index()
     return processed_data
 
@@ -101,9 +101,8 @@ def create_composite_id(product_id, website):
 if __name__ == "__main__":
     existing_data = fetch_data_from_firestore()
     directory_path = '../../data/raw'
-    new_data = combine_and_process_csv_files(directory_path)
-    processed_data = process_products(existing_data, new_data)
-    # you only want to process the images of new data
-    new_products_data = processed_data[processed_data['is_new'] == True]
-    update_firebase(processed_data)
+    new_data = combine_and_process_csv_files(directory_path) #combine all new data
+    processed_data = process_products(existing_data, new_data) # combines new and old data, then deduplicates
+    update_firebase(processed_data) 
+    
 

@@ -33,9 +33,10 @@ class ThreadheadsSpider(scrapy.Spider):
         
             try:
                 if product_id and product_image and product_description is not None:
+                    highest_resolution_image = self.get_highest_resolution(product_image)
                     yield {
                         'product_id': product_id,
-                        'images': product_image,
+                        'images': highest_resolution_image,
                         'description':  product_description,
                         'shop': None,
                         'website': self.name,
@@ -59,4 +60,18 @@ class ThreadheadsSpider(scrapy.Spider):
         if next_page is not None:
             print('Next Page: ', self.baseURL + next_page)
             yield response.follow(self.baseURL + next_page, callback=self.parse)
+
+    def get_highest_resolution(self, image_url):
+        resolutions = ['4000', '3000', '2000', '1000']
+        for resolution in self.resolutions:
+            new_url = image_url.replace("&width=1000", "&width={}".format(resolution))
+            if self.url_exists(new_url):
+                return new_url
+        return image_url
+
+    def url_exists(self, url):
+        request = scrapy.Request(url, method='HEAD')
+        response = self.crawler.engine.download(request, self)
+        return response.status == 200
+
 

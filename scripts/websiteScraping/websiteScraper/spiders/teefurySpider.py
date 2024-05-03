@@ -31,14 +31,15 @@ class TeefurySpider(scrapy.Spider):
                 self.item_count += 1
                 id_attr = product.css('a::attr(id)').get()
                 product_id = id_attr.split('-')[-1]
-                product_image = product.css('img.collect-prod__img::attr(src)').get()
+                product_image = 'https:' + product.css('img.collect-prod__img::attr(src)').get()
                 product_description = product.css('div.product-grid-item__meta a::text').get()
                 
                 try:
                     if product_id and product_image and product_description is not None:
+                        highest_resolution_image = self.get_highest_resolution(product_image)
                         yield {
                             'product_id': product_id,
-                            'images': 'https:' + product_image,
+                            'images': highest_resolution_image,
                             'description': product_description,
                             'shop': None,
                             'website': self.website,
@@ -57,3 +58,17 @@ class TeefurySpider(scrapy.Spider):
         # Close the spider when 2500 items have been processed
         if self.item_count >= 2500:
             self.crawler.engine.close_spider(self, 'reached maximum item count')
+
+    def get_highest_resolution(self, image_url):
+            resolutions = ['4000x', '3000x', '2000x', '1000x']  # Common resolutions to try
+            for resolution in resolutions:
+                new_url = image_url.replace("300x", resolution)
+                if self.url_exists(new_url):
+                    return new_url
+            # If none of the modified URLs work, return the original one
+            return image_url
+
+    def url_exists(self, url):
+        request = scrapy.Request(url, method='HEAD')
+        response = self.crawler.engine.download(request, self)
+        return response.status == 200

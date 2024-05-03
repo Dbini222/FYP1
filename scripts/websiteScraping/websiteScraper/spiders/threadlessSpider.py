@@ -29,9 +29,10 @@ class ThreadlessSpider(scrapy.Spider):
                 popularity = self.overall_position + int(data["position"])
                 try:
                     if product_id and image and description is not None:
+                        highest_resolution_image = self.get_highest_resolution(image)
                         yield {
                             'product_id': product_id,
-                            'images': image,
+                            'images': highest_resolution_image,
                             'description': description,
                             'shop': shop,
                             'website': self.name,
@@ -55,3 +56,19 @@ class ThreadlessSpider(scrapy.Spider):
         next_page = self.baseURL + response.css('a[aria-label="Next"].pjax-link').attrib['href']
         if next_page is not None:
             yield response.follow(next_page, callback=self.parse)
+
+
+    def get_highest_resolution(self, image_url):
+        resolutions = ['4000', '3000', '2000', '1000', '800']
+        for resolution in self.resolutions:
+            new_url = image_url.replace("v=3&d", "v={}&d".format(resolution))
+            if self.url_exists(new_url):
+                return new_url
+        return image_url
+
+    def url_exists(self, url):
+        request = scrapy.Request(url, method='HEAD')
+        response = self.crawler.engine.download(request, self)
+        return response.status == 200
+
+
