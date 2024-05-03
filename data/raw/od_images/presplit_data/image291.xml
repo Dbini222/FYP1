@@ -1,0 +1,14 @@
+<annotation verified="yes">
+	<folder>od_images</folder>
+	<filename>image291.jpg</filename>
+	<path>/Users/danib/FYP/data/raw/od_images/image291.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>300</width>
+		<height>200</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+</annotation>
