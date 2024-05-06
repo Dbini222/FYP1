@@ -21,7 +21,7 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-dag = DAG(
+dag1 = DAG(
     'data_collection_dag',
     default_args=default_args,
     description='DAG to run multiple Scrapy spiders and save output to CSV with dynamic age',
@@ -67,6 +67,29 @@ def increment_age():
     age = int(Variable.get("age", default_var=0)) + 1
     Variable.set("age", age)
 
+# download images from the URLs, saves them in data/raw/preprocessed_images
+def data_processor():
+    spider_name = 'image_downloader'
+    home_dir = os.path.expanduser('~')
+    data_process_dir = os.path.join(home_dir, 'FYP', 'scripts', 'websiteScraping')
+    try:
+        subprocess.run(['scrapy', 'crawl', spider_name], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running Scrapy spider: {e}")
+    home_dir = os.path.expanduser('~')
+    data_process_dir = os.path.join(home_dir, 'FYP', 'scripts', 'dataProcessing')
+    try:
+        os.chdir(data_process_dir)
+        print("Deduplicating metadata in database and new data")
+        subprocess.run(['python', 'deduplication_metadata.py'], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error deduplicating: {e}")
+    try:
+        print("Processing images")
+        subprocess.run(['python', 'image_processing.py'], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error processing images: {e}")
+
 spider_names = ['amazon', 'printerval', 'teefury', 'teepublic', 'threadheads', 'threadless']
 previous_task = None
 
@@ -75,14 +98,14 @@ for spider_name in spider_names:
         task_id=f'run_{spider_name}_spider',
         python_callable=run_scrapy,
         op_args=[spider_name],
-        dag=dag
+        dag=dag1
     )
     
     include_age_task = PythonOperator(
         task_id=f'include_age_and_update_{spider_name}_csv',
         python_callable=include_age_and_update_csv,
         op_args=[spider_name],
-        dag=dag
+        dag=dag1
     )
     
     if previous_task:
@@ -93,6 +116,16 @@ for spider_name in spider_names:
 final_task = PythonOperator(
     task_id='increment_age_final',
     python_callable=increment_age,
-    dag=dag
+    dag=dag1
 )
-previous_task >> final_task
+
+process_data = PythonOperator(
+    task_id='process_data',
+    python_callable=data_processor,
+    dag=dag1
+)
+
+
+
+
+previous_task >> final_task >> process_data

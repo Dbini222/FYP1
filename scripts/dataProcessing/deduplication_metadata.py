@@ -72,6 +72,7 @@ def process_products(old_data, new_data):
         combined_data = pd.concat([old_data, new_data], ignore_index=True)
     
     combined_data['shop'] = combined_data['shop'].fillna('None')
+    combined_data['popularity'] = pd.to_numeric(combined_data['popularity'], errors='coerce')
     processed_data = combined_data.groupby(['description', 'shop']).agg({
         'product_id': 'first',  # Keep the first product_id encountered
         'images': 'first',  # Keep the first image URL encountered
@@ -90,13 +91,28 @@ def update_firebase(data):
 
     for _, row in data.iterrows():
         composite_id = create_composite_id(row['product_id'], row['shop'])
+        print(f"Adding product with ID: {composite_id}")
         product_ref = db.collection('products').document(composite_id)
-        product_ref.set(row.to_dict(), merge=True)
-        print(f"Product added with ID: {composite_id}")
+        try: 
+            # check document exists, update params if so
+            doc = product_ref.get()
+            if doc.exists:
+                print(f"Document exists, updating: {composite_id}")
+                product_ref.update(row.to_dict())
+            else:
+                print(f"Document does not exist, creating new: {composite_id}")
+                product_ref.set(row.to_dict())
+            
+            print(f"Product added with ID: {composite_id}")
+        except Exception as e:
+            print(f"Failed to update or create document: {e}")
+        # product_ref.set(row.to_dict(), merge=True)
+        
 
 def create_composite_id(product_id, website):
     """Generate a unique document ID based on product_id and website."""
-    return f"{product_id}_{website}"
+    safe_website = website.replace('/', '_')
+    return f"{product_id}_{safe_website}"
 
 if __name__ == "__main__":
     existing_data = fetch_data_from_firestore()

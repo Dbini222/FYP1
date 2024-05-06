@@ -5,6 +5,7 @@ TODO:
 
 To access the Airflow web ui, just run the following commands in terminal:
 ```airflow webserver -p 8080```
+```airflow scheduler```
 
 To test specific task using Airflow CLI run the following:
 ```airflow tasks test <dag_id> <task_id> <execution_date>```

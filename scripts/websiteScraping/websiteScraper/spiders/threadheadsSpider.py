@@ -1,6 +1,6 @@
 # https://threadheads.co.uk/collections/shirts?filter.p.product_type=T-Shirt
 # max items: 1603
-
+import re
 import scrapy 
 
 
@@ -41,7 +41,6 @@ class ThreadheadsSpider(scrapy.Spider):
                         'shop': None,
                         'website': self.name,
                         'popularity': self.overall_position,
-                        'age': self.age,
                         }
         
             except Exception as e:
@@ -62,16 +61,13 @@ class ThreadheadsSpider(scrapy.Spider):
             yield response.follow(self.baseURL + next_page, callback=self.parse)
 
     def get_highest_resolution(self, image_url):
-        resolutions = ['4000', '3000', '2000', '1000']
-        for resolution in self.resolutions:
-            new_url = image_url.replace("&width=1000", "&width={}".format(resolution))
-            if self.url_exists(new_url):
-                return new_url
-        return image_url
+        pattern = re.compile(r"width=\d+\d+\d")
+        new_url = pattern.sub("width=4000", image_url)
+        return new_url
 
-    def url_exists(self, url):
-        request = scrapy.Request(url, method='HEAD')
-        response = self.crawler.engine.download(request, self)
-        return response.status == 200
+    # def url_exists(self, url):
+    #     request = scrapy.Request(url, method='HEAD')
+    #     response = self.crawler.engine.download(request, self)
+    #     return response.status == 200
 
 

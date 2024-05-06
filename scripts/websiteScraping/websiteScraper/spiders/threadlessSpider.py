@@ -1,5 +1,6 @@
 import scrapy 
 import json
+import re
 #Fix this so that it doesn't have to do popularity like that, instead make it a counter which is more reliable like the other code
 class ThreadlessSpider(scrapy.Spider):
     name = "threadless"
@@ -37,7 +38,6 @@ class ThreadlessSpider(scrapy.Spider):
                             'shop': shop,
                             'website': self.name,
                             'popularity': popularity,
-                            'age': self.age,
                             }
             
                 except Exception as e:
@@ -59,16 +59,13 @@ class ThreadlessSpider(scrapy.Spider):
 
 
     def get_highest_resolution(self, image_url):
-        resolutions = ['4000', '3000', '2000', '1000', '800']
-        for resolution in self.resolutions:
-            new_url = image_url.replace("v=3&d", "v={}&d".format(resolution))
-            if self.url_exists(new_url):
-                return new_url
-        return image_url
+        pattern = re.compile(r"v=\d+&d")
+        new_url = pattern.sub("v=4000&d", image_url)
+        return new_url
 
-    def url_exists(self, url):
-        request = scrapy.Request(url, method='HEAD')
-        response = self.crawler.engine.download(request, self)
-        return response.status == 200
+    # def url_exists(self, url):
+    #     request = scrapy.Request(url, method='HEAD')
+    #     response = self.crawler.engine.download(request, self)
+    #     return response.status == 200
 
 

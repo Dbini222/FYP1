@@ -37,7 +37,6 @@ class TeepublicSpider(scrapy.Spider):
                         'shop': product_shop,
                         'website': self.name,
                         'popularity': self.overall_position,
-                        'age': self.age,
                         }
         
             except Exception as e:
