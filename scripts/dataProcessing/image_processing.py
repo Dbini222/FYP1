@@ -7,6 +7,27 @@ from PIL import Image
 from torchvision import transforms
 import firebase_admin
 from firebase_admin import credentials, firestore,storage
+import sys
+import torch
+
+# Add yolov5 directory to the system path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+yolov5_dir = os.path.join(current_dir, '../../yolov5')
+sys.path.append(yolov5_dir)
+
+# Load the custom-trained model
+model = torch.hub.load(
+    yolov5_dir, 
+    'custom', 
+    path=os.path.join(yolov5_dir, 'runs/train/exp/weights/best.pt'), 
+    source='local'
+)
+
+# Example inference (optional)
+img = 'https://ultralytics.com/images/zidane.jpg'
+results = model(img)
+results.show()
+
 
 def initialize_firebase():
     """Initializes Firebase if it hasn't been initialized yet."""
@@ -30,6 +51,7 @@ def save_to_firebase(processed_images):
             temp_path = f'/tmp/{path}'
             processed_image = Image.fromarray((image * 255).astype(np.uint8))
             processed_image.save(temp_path, 'JPEG')
+            print(temp_path)
 
             # Upload to Firebase Storage at the root level
             blob = bucket.blob(f'images/{path}')  # Changed from 'images/{filename}' to just '{filename}'
@@ -118,10 +140,22 @@ def get_dominant_colors_and_complexity(image, num_colors=10):
     )
     return unique_colors, complexity
 
+def replace_transparent_background(image_path, background_color=(255, 255, 255)):
+    # Open the image
+    img = Image.open(image_path).convert("RGBA")
+
+    # Create a new image with the same size and the desired background color
+    background = Image.new("RGBA", img.size, background_color + (255,))
+
+    # Composite the original image on the background
+    combined = Image.alpha_composite(background, img)
+
+    # Convert to RGB (discard alpha channel)
+    return combined.convert("RGB")
 # Load images from a list of file paths as a list of PIL images
 def load_images(image_paths):
     try:
-        images = [Image.open(p).convert('RGB') for p in image_paths]  # Ensuring RGB and no alpha channels
+        images = [replace_transparent_background(p) for p in image_paths]  # Ensuring RGB and no alpha channels
         return images
     except Exception as e:
         print(f"Failed to load images: {e}")
@@ -203,7 +237,6 @@ for i in range(0, len(image_paths), batch_size):
     batch_paths = image_paths[i:i+batch_size]
     print(batch_paths)
     images = load_images(batch_paths)  # Load images as PIL images and return list of images
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path='../../yolov5/runs/train/exp/weights/best.pt', force_reload=True) # change path to exp2 if you want yolov5l trained
     results = detect_objects_batch(images, model) # correctly detecting images (use results.show() if needed)
     for img, result, path in zip(images, results.xyxy, batch_paths):
         if len(result) == 0:
@@ -217,10 +250,11 @@ for i in range(0, len(image_paths), batch_size):
             filename = f'{os.path.splitext(os.path.basename(path))[0]}.jpg'
             print(filename )
             print(os.path.basename(path))
-            # save_image(resized_and_normalized_image, path, filename) #for testing to see what the image looks like
+            save_image(resized_and_normalized_image, path, filename) #for testing to see what the image looks like
             # save_to_firebase(resized_and_normalized_image, os.path.basename(path), {'colors': colors, 'complexity': complexity})
-            processed_images.append((resized_and_normalized_image, path, colors, complexity))
+            processed_images.append((resized_and_normalized_image, filename, colors, complexity))
 save_to_firebase(processed_images)
+     
 
 # # Process images in a directory
 # process_images_batch()
