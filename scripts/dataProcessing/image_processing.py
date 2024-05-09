@@ -73,7 +73,7 @@ def save_to_firebase(processed_images):
 
             # Update Firestore with the URL and additional metadata
             doc_ref = db.collection('products').document(doc_id)
-            doc_ref.set({**metadata, 'image_stored': url})
+            doc_ref.update({**metadata, 'image_stored': url})
         except Exception as e:
             print(f"Failed to save image to Firebase: {e}")
 
