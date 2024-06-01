@@ -1,10 +1,12 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.models import Variable
-from datetime import datetime, timedelta
+import csv
 import os
 import subprocess
-import csv
+from datetime import datetime, timedelta
+
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.python import PythonOperator
+
 """
 Steps:
 1. Run each Scrapy spider to collect data
@@ -69,13 +71,6 @@ def increment_age():
 
 # download images from the URLs, saves them in data/raw/preprocessed_images
 def data_processor():
-    spider_name = 'image_downloader'
-    home_dir = os.path.expanduser('~')
-    data_process_dir = os.path.join(home_dir, 'FYP', 'scripts', 'websiteScraping')
-    try:
-        subprocess.run(['scrapy', 'crawl', spider_name], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running Scrapy spider: {e}")
     home_dir = os.path.expanduser('~')
     data_process_dir = os.path.join(home_dir, 'FYP', 'scripts', 'dataProcessing')
     try:
@@ -84,6 +79,12 @@ def data_processor():
         subprocess.run(['python', 'deduplication_metadata.py'], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error deduplicating: {e}")
+    spider_name = 'image_downloader'
+    data_process_dir = os.path.join(home_dir, 'FYP', 'scripts', 'websiteScraping')
+    try:
+        subprocess.run(['scrapy', 'crawl', spider_name], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running Scrapy spider: {e}")
     try:
         print("Processing images")
         subprocess.run(['python', 'image_processing.py'], check=True)
