@@ -1,55 +1,81 @@
-#Things to do in this file:
-#get the images from the temporary file it's stored in, we are going to do this in batches
-# crop the image based on the yolov5l detection 
-# resize image to 1024x1024 pixels 
-# normalise pixels 
-#ensure images are all RGB
-import torch
 import os
-import numpy as np
+import sys
 from collections import OrderedDict
-from sklearn.cluster import KMeans
-from PIL import Image
-from torchvision import transforms
+
 import firebase_admin
-from firebase_admin import credentials, firestore,storage
+import numpy as np
+import torch
+from firebase_admin import credentials, firestore, storage
+from PIL import Image
+from sklearn.cluster import KMeans
+from torchvision import transforms
 
-#Initialise firebase]
-cred = credentials.Certificate('../../fyp-project-83298-firebase-adminsdk-omga1-3c741ce672.json')
-firebase_admin.initialize_app(cred, {
-    'storageBucket': 'fyp-project-83298.appspot.com'
-})
-db = firestore.client()
-bucket = storage.bucket()
+# Add yolov5 directory to the system path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+yolov5_dir = os.path.join(current_dir, '../../yolov5')
+sys.path.append(yolov5_dir)
 
-def save_to_firebase(image_array, filename, metadata):
-    """Saves an image to Firebase Storage at the root level and updates metadata in Firestore."""
+# Load the custom-trained model
+model = torch.hub.load(
+    yolov5_dir, 
+    'custom', 
+    path=os.path.join(yolov5_dir, 'runs/train/exp/weights/best.pt'), 
+    source='local'
+)
+
+# Example inference (optional)
+img = 'https://ultralytics.com/images/zidane.jpg'
+results = model(img)
+results.show()
+
+
+def initialize_firebase():
+    """Initializes Firebase if it hasn't been initialized yet."""
     try:
-        # Save image to a temporary file
-        temp_path = f'/tmp/{filename}'
-        processed_image = Image.fromarray((image_array * 255).astype(np.uint8))
-        processed_image.save(temp_path, 'JPEG')
+        # Attempt to get the existing app, raises ValueError if not yet initialized
+        firebase_admin.get_app()
+    except ValueError:
+        # If not initialized, do so now
+        cred = credentials.Certificate('../../fyp-project-83298-firebase-adminsdk-omga1-3c741ce672.json')
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': 'fyp-project-83298.appspot.com'
+        })
 
-        # Upload to Firebase Storage at the root level
-        blob = bucket.blob(f'images/{filename}')  # Changed from 'images/{filename}' to just '{filename}'
-        blob.upload_from_filename(temp_path)
-        
-        # Get URL of the uploaded file
-        url = blob.public_url
-        
-        # Clean up the temporary file
-        os.remove(temp_path)
-        
-        # Document ID is the filename without the extension
-        doc_id = os.path.splitext(filename)[0]
+def save_to_firebase(processed_images):
+    initialize_firebase()
+    db = firestore.client()
+    bucket = storage.bucket()
+    for image, path, colors, complexity in processed_images:
+        try:
+            # Save image to a temporary file
+            temp_path = f'/tmp/{path}'
+            processed_image = Image.fromarray((image * 255).astype(np.uint8))
+            processed_image.save(temp_path, 'JPEG')
+            print(temp_path)
 
-        # Update Firestore with the URL and additional metadata
-        doc_ref = db.collection('products').document(doc_id)
-        doc_ref.set({**metadata, 'image_stored': url})
+            # Upload to Firebase Storage at the root level
+            blob = bucket.blob(f'images/{path}')  # Changed from 'images/{filename}' to just '{filename}'
+            blob.upload_from_filename(temp_path)
+            
+            # Get URL of the uploaded file
+            url = blob.public_url
+            
+            # Clean up the temporary file
+            os.remove(temp_path)
+            
+            # Document ID is the filename without the extension
+            doc_id = os.path.splitext(path)[0]
+            metadata = {
+                'colors': colors,
+                'complexity': complexity,
+                'image_stored': url
+            }
 
-        return url
-    except Exception as e:
-        print(f"Failed to save image to Firebase: {e}")
+            # Update Firestore with the URL and additional metadata
+            doc_ref = db.collection('products').document(doc_id)
+            doc_ref.update({**metadata, 'image_stored': url})
+        except Exception as e:
+            print(f"Failed to save image to Firebase: {e}")
 
 
 def crop_image(img, detection):
@@ -114,15 +140,26 @@ def get_dominant_colors_and_complexity(image, num_colors=10):
     )
     return unique_colors, complexity
 
+def replace_transparent_background(image_path, background_color=(255, 255, 255)):
+    # Open the image
+    img = Image.open(image_path).convert("RGBA")
+
+    # Create a new image with the same size and the desired background color
+    background = Image.new("RGBA", img.size, background_color + (255,))
+
+    # Composite the original image on the background
+    combined = Image.alpha_composite(background, img)
+
+    # Convert to RGB (discard alpha channel)
+    return combined.convert("RGB")
 # Load images from a list of file paths as a list of PIL images
 def load_images(image_paths):
     try:
-        images = [Image.open(p).convert('RGB') for p in image_paths]  # Ensuring RGB and no alpha channels
+        images = [replace_transparent_background(p) for p in image_paths]  # Ensuring RGB and no alpha channels
         return images
     except Exception as e:
         print(f"Failed to load images: {e}")
 
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='../../yolov5/runs/train/exp/weights/best.pt', force_reload=True) # change path to exp2 if you want yolov5l trained
 def detect_objects_batch(images, model):
     try:
         results = model(images)
@@ -188,31 +225,36 @@ def save_image(image_array, original_path, filename):
     print(f"Image saved to {save_path}")
     return save_path
 
-def save_debug_image(image_array, file_path):
-    # img = Image.fromarray(image_array)
-    image_array.save(file_path, format='JPEG')
 
-def process_images_batch(directory, batch_size=32):
-    image_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".jpg")]
+# def process_images_batch(batch_size=32):
+print("script starting")
+batch_size = 32
+directory = "../../data/raw/preprocessed_images"
+image_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".png") or f.endswith(".jpg")]
+processed_images = []  # List to store tuples of (image, path, colors, complexity)
     # Process images in batches
-    for i in range(0, len(image_paths), batch_size):
-        batch_paths = image_paths[i:i+batch_size]
-        images = load_images(batch_paths)  # Load images as PIL images and return list of images
-        results = detect_objects_batch(images, model) # correctly detecting images (use results.show() if needed)
-        for img, result, path in zip(images, results.xyxy, batch_paths):
-            if len(result) == 0:
-                print(f"Skipping image {path} as it has no detections.")
-                continue  # Skip images with no detections i.e. plain t-shirts
-            cropped_image = crop_image(img, result[0])  # Crop the image based on the first detection
-            if cropped_image:
-                colors, complexity = get_dominant_colors_and_complexity(cropped_image)
-                resized_and_normalized_image = resize_and_normalize(cropped_image)
-                # print(f"Colors: {colors}, Complexity: {complexity}", path)
-                filename = f'{os.path.splitext(os.path.basename(path))[0]}.jpg'
-                print(filename)
-                # save_image(resized_and_normalized_image, path, filename) #for testing to see what the image looks like
-                save_to_firebase(resized_and_normalized_image, os.path.basename(path), {'colors': colors, 'complexity': complexity})
+for i in range(0, len(image_paths), batch_size):
+    batch_paths = image_paths[i:i+batch_size]
+    print(batch_paths)
+    images = load_images(batch_paths)  # Load images as PIL images and return list of images
+    results = detect_objects_batch(images, model) # correctly detecting images (use results.show() if needed)
+    for img, result, path in zip(images, results.xyxy, batch_paths):
+        if len(result) == 0:
+            print(f"Skipping image {path} as it has no detections.")
+            continue  # Skip images with no detections i.e. plain t-shirts
+        cropped_image = crop_image(img, result[0])  # Crop the image based on the first detection
+        if cropped_image:
+            colors, complexity = get_dominant_colors_and_complexity(cropped_image)
+            resized_and_normalized_image = resize_and_normalize(cropped_image)
+            # print(f"Colors: {colors}, Complexity: {complexity}", path)
+            filename = f'{os.path.splitext(os.path.basename(path))[0]}.jpg'
+            print(filename )
+            print(os.path.basename(path))
+            save_image(resized_and_normalized_image, path, filename) #for testing to see what the image looks like
+            # save_to_firebase(resized_and_normalized_image, os.path.basename(path), {'colors': colors, 'complexity': complexity})
+            processed_images.append((resized_and_normalized_image, filename, colors, complexity))
+save_to_firebase(processed_images)
+     
 
-  
-
-# process_images_batch('../../data/downloaded_images', batch_size=32)
+# # Process images in a directory
+# process_images_batch()

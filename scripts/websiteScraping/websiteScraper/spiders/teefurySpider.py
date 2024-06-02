@@ -1,4 +1,5 @@
 import scrapy
+import re
 # no need to get shop name here, because all the products have unique names
 class TeefurySpider(scrapy.Spider):
     name = "teefury"
@@ -60,15 +61,15 @@ class TeefurySpider(scrapy.Spider):
             self.crawler.engine.close_spider(self, 'reached maximum item count')
 
     def get_highest_resolution(self, image_url):
-            resolutions = ['4000x', '3000x', '2000x', '1000x']  # Common resolutions to try
-            for resolution in resolutions:
-                new_url = image_url.replace("300x", resolution)
-                if self.url_exists(new_url):
-                    return new_url
-            # If none of the modified URLs work, return the original one
-            return image_url
+            # pattern = re.compile(r"/unsafe/\d+x\d+/")
+            # new_url = pattern.sub("/unsafe/4000x4000/", image_url)
+        pattern = re.compile(r"_\d+\d+\d+x")
+        new_url = pattern.sub("_4000x", image_url)
+         
+        return new_url
+
 
     def url_exists(self, url):
         request = scrapy.Request(url, method='HEAD')
-        response = self.crawler.engine.download(request, self)
+        response = self.crawler.engine.download(request)
         return response.status == 200

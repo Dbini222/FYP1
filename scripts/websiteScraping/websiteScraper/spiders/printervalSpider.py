@@ -1,5 +1,5 @@
 import scrapy
-
+import re
 
 class PrintervalSpider(scrapy.Spider):
     name = "printerval"
@@ -41,7 +41,6 @@ class PrintervalSpider(scrapy.Spider):
                         'shop': product_shop,
                         'website': self.name,
                         'popularity': self.overall_position,
-                        'age': self.age,
                     }
 
             except Exception as e:
@@ -55,15 +54,13 @@ class PrintervalSpider(scrapy.Spider):
             print('Error: ', e)
 
     def get_highest_resolution(self, image_url):
-        resolutions = ['4000X4000', '3000X3000', '2000X2000', '1000X1000', '800X800']  # Common resolutions to try
-        for resolution in resolutions:
-            new_url = image_url.replace("/unsafe/640x640/", "/unsafe/{}/".format(resolution))
-            if self.url_exists(new_url):
-                return new_url
-        # If none of the modified URLs work, return the original one
-        return image_url
+        pattern = re.compile(r"/unsafe/\d+x\d+/")
+        new_url = pattern.sub("/unsafe/4000x4000/", image_url)
+        print(new_url)
+        return new_url
 
-    def url_exists(self, url):
-        request = scrapy.Request(url, method='HEAD')
-        response = self.crawler.engine.download(request, self)
-        return response.status == 200
+
+    # def url_exists(self, url):
+    #     request = scrapy.Request(url, method='HEAD')
+    #     response = self.crawler.engine.download(request, self)
+    #     return response.status == 200

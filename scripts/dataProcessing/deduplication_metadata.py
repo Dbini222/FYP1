@@ -1,9 +1,11 @@
-import pandas as pd
-import firebase_admin
-from firebase_admin import credentials, firestore
-from pathlib import Path
 import os
 from glob import glob
+from pathlib import Path
+
+import firebase_admin
+import numpy as np
+import pandas as pd
+from firebase_admin import credentials, firestore
 
 '''
 Because shop name isn't always available, we will mainly rely on product description to find duplicated, and only remove those with the same shop name
@@ -72,6 +74,7 @@ def process_products(old_data, new_data):
         combined_data = pd.concat([old_data, new_data], ignore_index=True)
     
     combined_data['shop'] = combined_data['shop'].fillna('None')
+    combined_data['popularity'] = pd.to_numeric(combined_data['popularity'], errors='coerce')
     processed_data = combined_data.groupby(['description', 'shop']).agg({
         'product_id': 'first',  # Keep the first product_id encountered
         'images': 'first',  # Keep the first image URL encountered
@@ -79,10 +82,16 @@ def process_products(old_data, new_data):
         'age': 'max',  # Use the highest age to signify that it is the most recent
         'is_new': 'first'  # Preserve the is_new status, double check this
     }).reset_index()
+    # processed_data['weight'] = calculate_weights(processed_data['popularity']) # Uncomment this when calculating for new age
     return processed_data
 
+# Calculate weights based on popularity # Uncomment this when calculating for new age
+# def calculate_weights(popularity_series):
+#     max_popularity = np.log(popularity_series.max() + 0.1)
+#     weights = (1 - (np.log(max_popularity) / np.log(popularity_series + 0.1)))
+#     return weights / weights.sum()
+# def update_firebase(data):
 
-def update_firebase(data):
     """Update Firestore with processed product data."""
     if data.empty:
         print("No data to update in Firestore.")
@@ -90,13 +99,28 @@ def update_firebase(data):
 
     for _, row in data.iterrows():
         composite_id = create_composite_id(row['product_id'], row['shop'])
+        print(f"Adding product with ID: {composite_id}")
         product_ref = db.collection('products').document(composite_id)
-        product_ref.set(row.to_dict(), merge=True)
-        print(f"Product added with ID: {composite_id}")
+        try: 
+            # check document exists, update params if so
+            doc = product_ref.get()
+            if doc.exists:
+                print(f"Document exists, updating: {composite_id}")
+                product_ref.update(row.to_dict())
+            else:
+                print(f"Document does not exist, creating new: {composite_id}")
+                product_ref.set(row.to_dict())
+            
+            print(f"Product added with ID: {composite_id}")
+        except Exception as e:
+            print(f"Failed to update or create document: {e}")
+        # product_ref.set(row.to_dict(), merge=True)
+        
 
 def create_composite_id(product_id, website):
     """Generate a unique document ID based on product_id and website."""
-    return f"{product_id}_{website}"
+    safe_website = website.replace('/', '_')
+    return f"{product_id}_{safe_website}"
 
 if __name__ == "__main__":
     existing_data = fetch_data_from_firestore()

@@ -46,3 +46,5 @@ class ImageDownloaderSpider(scrapy.Spider):
         with open(file_path, 'wb') as f:
             f.write(response.body)
         self.log(f'Saved file {file_path}')
+
+        
