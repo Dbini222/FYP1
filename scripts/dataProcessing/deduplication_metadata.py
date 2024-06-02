@@ -1,9 +1,11 @@
-import pandas as pd
-import firebase_admin
-from firebase_admin import credentials, firestore
-from pathlib import Path
 import os
 from glob import glob
+from pathlib import Path
+
+import firebase_admin
+import numpy as np
+import pandas as pd
+from firebase_admin import credentials, firestore
 
 '''
 Because shop name isn't always available, we will mainly rely on product description to find duplicated, and only remove those with the same shop name
@@ -80,10 +82,16 @@ def process_products(old_data, new_data):
         'age': 'max',  # Use the highest age to signify that it is the most recent
         'is_new': 'first'  # Preserve the is_new status, double check this
     }).reset_index()
+    # processed_data['weight'] = calculate_weights(processed_data['popularity']) # Uncomment this when calculating for new age
     return processed_data
 
+# Calculate weights based on popularity # Uncomment this when calculating for new age
+# def calculate_weights(popularity_series):
+#     max_popularity = np.log(popularity_series.max() + 0.1)
+#     weights = (1 - (np.log(max_popularity) / np.log(popularity_series + 0.1)))
+#     return weights / weights.sum()
+# def update_firebase(data):
 
-def update_firebase(data):
     """Update Firestore with processed product data."""
     if data.empty:
         print("No data to update in Firestore.")
