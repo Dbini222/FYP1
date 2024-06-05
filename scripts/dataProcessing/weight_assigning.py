@@ -1,3 +1,4 @@
+# this file gets all the weights of the products in the database and assigns them weights. Only need to use it in the initial dataset
 from pathlib import Path
 import firebase_admin
 import numpy as np
@@ -55,12 +56,6 @@ def fetch_data_from_firestore(db):
         collections = db.collection('products').stream()
         data = [{'document_id': doc.id, **doc.to_dict()} for doc in collections]
         df = pd.DataFrame(data)
-        # df['age'].fillna(0, inplace=True)
-        if df['age'].notna().sum() != df['popularity'].notna().sum():
-            raise ValueError("Mismatch in non-NaN counts between 'age' and 'popularity'")
-        if df['age'].isna().any():
-            nan_age_ids = df[df['age'].isna()]['document_id'].tolist()
-            print(f"Entries with NaN in 'age': {nan_age_ids}")
         if df['popularity'].isna().any():
             nan_popularity_ids = df[df['popularity'].isna()]['document_id'].tolist()
             print(f"Entries with NaN in 'popularity': {nan_popularity_ids}")
@@ -71,14 +66,12 @@ def fetch_data_from_firestore(db):
 
 
 def calculate_weights(data):
-    data['age'] = data['age'].replace(0, 0.01)
-    data['age'] = data['age'].astype(float)
     data['popularity'] = data['popularity'].astype(float)
+
     print(data)
-    max_age = data['age'].max() + 1
+
     max_popularity = np.log(data['popularity'].max() + 0.1)
 
-    data['weight'] = (1 / ((data['age'] + 1) / max_age)) * (1- (np.log(max_popularity) / np.log(data['popularity'] + 1))) #inverted popularity
     total_weight = data['weight'].sum()
     data['weight'] /= total_weight
     return data
