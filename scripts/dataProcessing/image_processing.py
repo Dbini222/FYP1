@@ -1,7 +1,8 @@
 import os
+
+import pandas as pd
 import sys
 from collections import OrderedDict
-
 import firebase_admin
 import numpy as np
 import torch
@@ -16,19 +17,12 @@ yolov5_dir = os.path.join(current_dir, '../../yolov5')
 sys.path.append(yolov5_dir)
 
 # Load the custom-trained model
-model = torch.hub.load(
-    yolov5_dir, 
-    'custom', 
-    path=os.path.join(yolov5_dir, 'runs/train/exp/weights/best.pt'), 
-    source='local'
-)
-
-# Example inference (optional)
-img = 'https://ultralytics.com/images/zidane.jpg'
-results = model(img)
-results.show()
-
-
+# model = torch.hub.load(
+#     yolov5_dir, 
+#     'custom', 
+#     path=os.path.join(yolov5_dir, 'runs/train/exp2/weights/best.pt'), 
+#     source='local'
+# )
 def initialize_firebase():
     """Initializes Firebase if it hasn't been initialized yet."""
     try:
@@ -40,42 +34,73 @@ def initialize_firebase():
         firebase_admin.initialize_app(cred, {
             'storageBucket': 'fyp-project-83298.appspot.com'
         })
-
 def save_to_firebase(processed_images):
+    """Save all processed images and their metadata in batch to Firebase."""
     initialize_firebase()
     db = firestore.client()
     bucket = storage.bucket()
+    batch = db.batch()
+
     for image, path, colors, complexity in processed_images:
-        try:
-            # Save image to a temporary file
-            temp_path = f'/tmp/{path}'
+        doc_id = os.path.splitext(os.path.basename(path))[0]
+        doc_ref = db.collection('products').document(doc_id)
+        doc = doc_ref.get()
+
+        if not doc.exists or doc.to_dict().get('image_stored') is None:
+            # Process and upload image only if not already done
+            temp_path = '/tmp/{}'.format(path)
             processed_image = Image.fromarray((image * 255).astype(np.uint8))
             processed_image.save(temp_path, 'JPEG')
-            print(temp_path)
 
-            # Upload to Firebase Storage at the root level
-            blob = bucket.blob(f'images/{path}')  # Changed from 'images/{filename}' to just '{filename}'
+            blob = bucket.blob('images/{}'.format(path))
             blob.upload_from_filename(temp_path)
-            
-            # Get URL of the uploaded file
             url = blob.public_url
-            
-            # Clean up the temporary file
             os.remove(temp_path)
-            
-            # Document ID is the filename without the extension
-            doc_id = os.path.splitext(path)[0]
-            metadata = {
-                'colors': colors,
-                'complexity': complexity,
-                'image_stored': url
-            }
 
-            # Update Firestore with the URL and additional metadata
-            doc_ref = db.collection('products').document(doc_id)
-            doc_ref.update({**metadata, 'image_stored': url})
-        except Exception as e:
-            print(f"Failed to save image to Firebase: {e}")
+            batch.set(doc_ref, {'colors': colors, 'complexity': complexity, 'image_stored': url}, merge=True)
+
+    batch.commit()
+    print("Firebase batch update completed.")
+
+# def save_to_firebase(processed_images):
+#     initialize_firebase()
+#     db = firestore.client()
+#     bucket = storage.bucket()
+#     for image, path, colors, complexity in processed_images:
+#         try:
+#             # Save image to a temporary file
+#             temp_path = '/tmp/{}'.format(path)
+#             processed_image = Image.fromarray((image * 255).astype(np.uint8))
+#             processed_image.save(temp_path, 'JPEG')
+#             print(temp_path)
+
+#             # Upload to Firebase Storage at the root level
+#             blob = bucket.blob('images/{}'.format(path))  # Changed from 'images/{filename}' to just '{filename}'
+#             blob.upload_from_filename(temp_path)
+            
+#             # Get URL of the uploaded file
+#             url = blob.public_url
+            
+#             # Clean up the temporary file
+#             os.remove(temp_path)
+            
+#             # Document ID is the filename without the extension
+#             doc_id = os.path.splitext(path)[0]
+#             print(doc_id)
+
+#             # Update Firestore with the URL and additional metadata
+#             doc_ref = db.collection('products').document(doc_id)
+#             doc = doc_ref.get()
+#             # Check if the document exists and if it contains the 'color' field
+#             if doc.exists and 'color' in doc.to_dict():
+#                 # The 'color' field exists, so continue
+#                 pass
+#             else:
+#                 doc_ref.update({'colors': colors})
+#                 doc_ref.update({'complexity': complexity})
+#                 doc_ref.update({'image_stored': url})
+#         except Exception as e:
+#             print('Failed to save image to Firebase: /{}', format(e))
 
 
 def crop_image(img, detection):
@@ -120,7 +145,7 @@ def crop_image(img, detection):
         crop = img.crop((square_x1, square_y1, square_x2, square_y2))
         return crop
     except Exception as e:
-        print(f"Failed to crop image: {e}")
+        print("Failed to crop image: /{}", format(e))
   
 
 def get_dominant_colors_and_complexity(image, num_colors=10):
@@ -158,14 +183,14 @@ def load_images(image_paths):
         images = [replace_transparent_background(p) for p in image_paths]  # Ensuring RGB and no alpha channels
         return images
     except Exception as e:
-        print(f"Failed to load images: {e}")
+        print("Failed to load images: /{}", format(e))
 
 def detect_objects_batch(images, model):
     try:
         results = model(images)
         return results
     except Exception as e:
-        print(f"Failed to detect objects: {e}")
+        print("Failed to detect objects: /{}", format(e))
         return None
 
 def resize_and_normalize(img, size=(1024, 1024)):
@@ -177,7 +202,7 @@ def resize_and_normalize(img, size=(1024, 1024)):
         img_array = np.array(img) / 255.0
         return img_array
     except Exception as e:
-        print(f"Failed to resize and normalize image: {e}")
+        print("Failed to resize and normalize image: /{}", format(e))
         return None
 
 def find_nearest_color(rgb):
@@ -222,39 +247,47 @@ def save_image(image_array, original_path, filename):
     processed_image = Image.fromarray((image_array * 255).astype(np.uint8))
     processed_image.save(save_path, 'JPEG')  # Saving as JPEG; change format if necessary
     
-    print(f"Image saved to {save_path}")
+    print("Image saved to /{}", format(save_path))
     return save_path
 
 
-# def process_images_batch(batch_size=32):
-print("script starting")
-batch_size = 32
-directory = "../../data/raw/preprocessed_images"
-image_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".png") or f.endswith(".jpg")]
-processed_images = []  # List to store tuples of (image, path, colors, complexity)
-    # Process images in batches
-for i in range(0, len(image_paths), batch_size):
-    batch_paths = image_paths[i:i+batch_size]
-    print(batch_paths)
-    images = load_images(batch_paths)  # Load images as PIL images and return list of images
-    results = detect_objects_batch(images, model) # correctly detecting images (use results.show() if needed)
+def process_images_batch(batch_index, batch_size=16):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    yolov5_dir = os.path.join(current_dir, '../../yolov5')
+    sys.path.append(yolov5_dir)
+    model = torch.hub.load(yolov5_dir, 'custom', path=os.path.join(yolov5_dir, 'runs/train/exp2/weights/best.pt'), source='local')
+    
+    directory = "../../data/raw/preprocessed_images"
+    image_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".png") or f.endswith(".jpg")]
+    processed_images = []
+
+    start_index = batch_index * batch_size
+    end_index = start_index + batch_size
+    batch_paths = image_paths[start_index:end_index]
+    images = load_images(batch_paths)
+    results = detect_objects_batch(images, model)
+
     for img, result, path in zip(images, results.xyxy, batch_paths):
         if len(result) == 0:
-            print(f"Skipping image {path} as it has no detections.")
-            continue  # Skip images with no detections i.e. plain t-shirts
-        cropped_image = crop_image(img, result[0])  # Crop the image based on the first detection
+            print("Skipping image /{} as it has no detections.", format(path))
+            continue
+        cropped_image = crop_image(img, result[0])
         if cropped_image:
             colors, complexity = get_dominant_colors_and_complexity(cropped_image)
+            # if pd.isna(colors) or pd.isna(complexity):
+            #     print("Skipping image /{} due to missing color or complexity data.", format(path))
+            #     continue
             resized_and_normalized_image = resize_and_normalize(cropped_image)
-            # print(f"Colors: {colors}, Complexity: {complexity}", path)
-            filename = f'{os.path.splitext(os.path.basename(path))[0]}.jpg'
-            print(filename )
-            print(os.path.basename(path))
-            save_image(resized_and_normalized_image, path, filename) #for testing to see what the image looks like
-            # save_to_firebase(resized_and_normalized_image, os.path.basename(path), {'colors': colors, 'complexity': complexity})
+            filename = '{}.jpg'.format(os.path.splitext(os.path.basename(path))[0])
+            # save_image(resized_and_normalized_image, path, filename)
             processed_images.append((resized_and_normalized_image, filename, colors, complexity))
-save_to_firebase(processed_images)
-     
 
-# # Process images in a directory
-# process_images_batch()
+    if processed_images:
+        save_to_firebase(processed_images)
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python process_images_batch.py <batch_index>")
+        sys.exit(1)
+    batch_index = int(sys.argv[1])
+    process_images_batch(batch_index)

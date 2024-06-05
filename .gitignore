@@ -28,6 +28,7 @@ data/
 *.csv
 *.h5
 *.pkl
+*.png
 
 # Model checkpoints and artifacts
 models/
@@ -42,3 +43,6 @@ airflow_home/airflow.db
 # Ignore any custom directories or files
 custom_dir/
 custom_file.txt
+
+#Ignore condor
+scripts/data_ptocessing/condor.*
