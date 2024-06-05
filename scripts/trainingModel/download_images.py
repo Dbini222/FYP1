@@ -1,4 +1,4 @@
-# this file should be called before training the style-gan ada. It currently gets all the datasets, labels etc and zips it with the images so that it is dijestable for train.py
+# Binary encoding for each class, i.e. 00110101012
 import json
 import os
 import zipfile
@@ -21,22 +21,29 @@ def download_images(metadata_collection, local_dir, metadata_filename):
         os.makedirs(local_dir)
 
     metadata = db.collection(metadata_collection).stream()
-    images_info = []
+    labels_info = []
+    weights_info = []
+
+    # Define the color and complexity mappings
+    colors = ["red", "green", "blue", "yellow", "orange", "purple", "brown", "grey", "black", "white"]
+    complexities = {"simple": 0, "normal": 1, "complex": 2}
 
     for meta in metadata:
         meta_dict = meta.to_dict()
         product_id = meta_dict['product_id']
         image_path = f'images/{product_id}.png'
         local_path = os.path.join(local_dir, f'{product_id}.png')
-        #prepare metadata info for JSON
-        images_info.append({
-            "filename": f'{product_id}.png',
-            "weight": meta_dict.get('weight', 0),  # Default weight if not specified
-            "labels": {
-                "colors": meta_dict.get('color', ["red", "green","blue", "yellow", "orange", "purple", "black", "white", "gray", "brown"]),  # Default color if not specified
-                "complexity": meta_dict.get('complexity', 'normal')  # Default complexity if not specified
-            }
-        })
+
+        # Create binary color vector
+        color_vector = [1 if color in meta_dict.get('color', []) else 0 for color in colors]
+        complexity_index = complexities.get(meta_dict.get('complexity', 'normal'))
+
+        # Combine color vector with complexity index
+        label_vector = color_vector + [complexity_index]
+
+        # Prepare labels and weights for JSON
+        labels_info.append([os.path.join(local_dir, f'{product_id}.png'), label_vector])
+        weights_info.append([os.path.join(local_dir, f'{product_id}.png'), meta_dict.get('weight', 0.0)])
 
         # Download the image
         blob = bucket.blob(image_path)
@@ -46,11 +53,13 @@ def download_images(metadata_collection, local_dir, metadata_filename):
         except FirebaseError as e:
             print(f'Failed to download {product_id}.png: {e}')
 
-        metadata_path = os.path.join(local_dir, metadata_filename)
-        with open(metadata_path, 'w') as f:
-            json.dump({"images": images_info}, f, indent=4)
-        
+    # Save metadata to JSON
+    metadata_path = os.path.join(local_dir, metadata_filename)
+    with open(metadata_path, 'w') as f:
+        json.dump({"labels": labels_info, "weights": weights_info}, f, indent=4)
+
     return metadata_path
+
 
 def zip_dir(folder_path, output_path):
     with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -59,9 +68,6 @@ def zip_dir(folder_path, output_path):
                 zipf.write(os.path.join(root, file), arcname=file)
     print(f'Created zip archive at {output_path}')
 
-    
-
-
 # Usage
-metadata_file = download_images('products', '../../data/training_images', 'dataset.json')
-zip_dir('../../data/training_images', '../../data/training_dataset.zip')
+metadata_file = download_images('products', '../../data/processed', 'dataset.json')
+zip_dir('../../data/processed', '../../data/training_dataset.zip')
