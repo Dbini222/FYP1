@@ -1,10 +1,11 @@
 # this file gets all the weights of the products in the database and assigns them weights. Only need to use it in the initial dataset
 from pathlib import Path
-
 import firebase_admin
 import numpy as np
 import pandas as pd
 from firebase_admin import credentials, firestore
+from google.api_core.exceptions import ResourceExhausted, RetryError
+import time
 
 
 def main():
@@ -21,7 +22,7 @@ def main():
     cred = credentials.Certificate(str(firebase_key_path))
     firebase_admin.initialize_app(cred)
     db = firestore.client()
-
+    print('Starting...')
     # Fetch and process data
     data = fetch_data_from_firestore(db)
     if data.empty:
@@ -31,6 +32,7 @@ def main():
     weighted_data = calculate_weights(data)
     # print(weighted_data)
     update_weights_in_firestore(db, weighted_data)
+
 
 def generate_test_data():
     np.random.seed(42)  # For reproducible random results
@@ -48,7 +50,7 @@ def generate_test_data():
 
     return data
 
-#only getting popularity related weights
+
 def fetch_data_from_firestore(db):
     try:
         collections = db.collection('products').stream()
@@ -62,24 +64,58 @@ def fetch_data_from_firestore(db):
         print(f"Failed to fetch data from Firestore: {e}")
         return pd.DataFrame()
 
+
 def calculate_weights(data):
     data['popularity'] = data['popularity'].astype(float)
+
+    print(data)
+
     max_popularity = np.log(data['popularity'].max() + 0.1)
 
-    data['weight'] = (1- (np.log(max_popularity) / np.log(data['popularity']))) #inverted popularity
     total_weight = data['weight'].sum()
     data['weight'] /= total_weight
     return data
 
+
 def update_weights_in_firestore(db, data):
+    batch_size = 500
+    batch = db.batch()
+    changes_made = False
+    retry_count = 0
+    max_retries = 5
+    base_wait_time = 2  # seconds
+
     for index, row in data.iterrows():
         doc_id = str(row['document_id'])
         weight = row['weight']
         doc_ref = db.collection('products').document(doc_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            existing_weight = doc.to_dict().get('weight', None)
+            if existing_weight != weight:
+                batch.update(doc_ref, {'weight': weight})
+                changes_made = True
+        if (index + 1) % batch_size == 0:
+            commit_batch(batch, retry_count, max_retries, base_wait_time)
+            batch = db.batch()
+
+    if changes_made:
+        commit_batch(batch, retry_count, max_retries, base_wait_time)
+        print("Batch update committed.")
+
+
+def commit_batch(batch, retry_count, max_retries, base_wait_time):
+    while retry_count < max_retries:
         try:
-            doc_ref.update({'weight': weight})
-            print(f"Updated document {doc_id} with new weight: {weight}")
-        except Exception as e:
-            print(f"Failed to update weight for document {doc_id}: {e}")
+            batch.commit()
+            return
+        except (ResourceExhausted, RetryError) as e:
+            wait_time = base_wait_time * (2 ** retry_count)
+            print(f"Quota exceeded. Retrying in {wait_time} seconds...")
+            time.sleep(wait_time)
+            retry_count += 1
+    print("Max retries exceeded. Some updates may not have been committed.")
+
+
 if __name__ == "__main__":
     main()
