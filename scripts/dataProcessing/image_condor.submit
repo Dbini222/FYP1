@@ -1,0 +1,8 @@
+universe        = vanilla
+executable      = process_image.sh
+output          = condor.out.$(Process)
+error           = condor.err.$(Process)
+log             = condor.log
+arguments       = $(Process)
+requirements    = (OpSysVer == 2204)
+queue 1000
