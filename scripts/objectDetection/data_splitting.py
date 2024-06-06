@@ -75,19 +75,22 @@ os.makedirs(os.path.join(valid_dir, 'labels'), exist_ok=True)
 def copy_files(files, target_dir):
     for file in files:
         img_path = os.path.join(data_dir, file)
-        txt_path = img_path.replace('.jpg', '.txt')  # Adjust if necessary to find the correct .txt files
+        if img_path.endswith('.jpg'):
+            txt_path = img_path.replace('.jpg', '.txt')  # Adjust if necessary to find the correct .txt files
+        elif img_path.endswith('.png'):
+            txt_path = img_path.replace('.png', '.txt')  # Adjust if necessary to find the correct .txt files
 
         # Copy image
         shutil.copy(img_path, os.path.join(target_dir, 'images', file))
 
         # Check and copy corresponding label file
         if os.path.exists(txt_path):
-            shutil.copy(txt_path, os.path.join(target_dir, 'labels', file.replace('.jpg', '.txt')))
+            shutil.copy(txt_path, os.path.join(target_dir, 'labels', file.replace('.jpg', '.txt') if file.endswith('jpg') else file.replace('.png','.txt')))
         else:
             print(f"Warning: No label file found for {img_path}")
 
 # List all jpg files in the directory
-all_images = [f for f in os.listdir(data_dir) if f.endswith('.jpg')]
+all_images = [f for f in os.listdir(data_dir) if f.endswith('.jpg') or f.endswith('.png')]
 np.random.shuffle(all_images)  # Shuffle the dataset
 
 # Determine split point for training and validation sets (80% training, 20% validation)

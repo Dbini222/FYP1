@@ -255,7 +255,7 @@ def process_images_batch(batch_index, batch_size=16):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     yolov5_dir = os.path.join(current_dir, '../../yolov5')
     sys.path.append(yolov5_dir)
-    model = torch.hub.load(yolov5_dir, 'custom', path=os.path.join(yolov5_dir, 'runs/train/exp2/weights/best.pt'), source='local')
+    model = torch.hub.load(yolov5_dir, 'custom', path=os.path.join(yolov5_dir, 'runs/train/exp5/weights/best.pt'), source='local')
     
     directory = "../../data/raw/preprocessed_images"
     image_paths = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(".png") or f.endswith(".jpg")]

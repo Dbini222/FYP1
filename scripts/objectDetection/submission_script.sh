@@ -14,5 +14,5 @@ fi
 uptime
 # cd /vol/bitbucket/${USER}
 # python3 test.py
-cd /vol/bitbucket/${USER}/yolov5
-python train.py --img 640 --batch 16 --epochs 100 --data data/dataset.yaml --weights yolov5s.pt --cache
+cd /vol/bitbucket/${USER}/FYP/yolov5
+python train.py --img 640 --batch 16 --epochs 100 --data data/dataset.yaml --weights yolov5m.pt --cache
