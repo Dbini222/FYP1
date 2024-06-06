@@ -1,0 +1,26 @@
+<annotation verified="yes">
+	<folder>presplit_data</folder>
+	<filename>1432842_Fen.png</filename>
+	<path>/Users/danib/FYP/data/raw/od_images/presplit_data/1432842_Fen.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1200</width>
+		<height>1371</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>design</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>132</xmin>
+			<ymin>28</ymin>
+			<xmax>1045</xmax>
+			<ymax>1011</ymax>
+		</bndbox>
+	</object>
+</annotation>
