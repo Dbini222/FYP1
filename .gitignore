@@ -23,6 +23,8 @@ secrets.json
 *.tmp
 *.bak
 
+scripts/dataProcessing/condor*
+
 # Data files (raw and processed)
 data/
 *.csv

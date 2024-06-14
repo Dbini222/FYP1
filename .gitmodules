@@ -1,3 +1,6 @@
 [submodule "yolov5"]
 	path = yolov5
 	url = https://github.com/dbini222/yolov5.git
+[submodule "stylegan2-ada-pytorch"]
+	path = stylegan2-ada-pytorch
+	url = https://github.com/Dbini222/stylegan2-ada-pytorch.git
